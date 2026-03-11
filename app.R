@@ -1,5 +1,6 @@
 # My Intern Project App
 # Author: B.Davis
+# Date: 9/27/2025
 # Purpose: Create a UI for the anadrofish package
 
 library(shiny)
@@ -22,9 +23,181 @@ ui <- fluidPage(
     base_font = font_google("Inter"),
     primary = "#003366" # Optional: A nice deep blue for the primary buttons
   ),
+
+  # CSS for metric tiles, trend banner, and empty state
+  tags$style(HTML("
+    .metric-tile {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 16px 20px;
+      text-align: center;
+      height: 100%;
+    }
+    .metric-tile .metric-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6c757d;
+      margin-bottom: 6px;
+    }
+    .metric-tile .metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #003366;
+      line-height: 1.2;
+    }
+    .trend-banner {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .trend-banner .trend-label {
+      font-size: 0.85rem;
+      color: #6c757d;
+      margin: 0;
+    }
+    .trend-banner .trend-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0;
+    }
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 460px;
+      color: #adb5bd;
+      text-align: center;
+      gap: 12px;
+    }
+    .empty-state i {
+      font-size: 3rem;
+      opacity: 0.4;
+    }
+    .empty-state p {
+      font-size: 0.95rem;
+      max-width: 280px;
+      line-height: 1.5;
+    }
+  ")),
   
-  # Main Title
-  div(style = "padding: 15px 0px;", h2(icon("fish"), "Anadromous Fish Population Simulator")),
+  # Help & About Modal definition
+  tags$div(
+    id = "helpModal",
+    class = "modal fade",
+    tabindex = "-1",
+    tags$div(
+      class = "modal-dialog modal-lg modal-dialog-scrollable",
+      tags$div(
+        class = "modal-content",
+        tags$div(
+          class = "modal-header",
+          style = "background-color: #003366; color: white;",
+          tags$h5(class = "modal-title", icon("circle-info"), " About the Anadromous Fish Population Simulator"),
+          tags$button(type = "button", class = "btn-close btn-close-white", `data-bs-dismiss` = "modal")
+        ),
+        tags$div(
+          class = "modal-body",
+          
+          # Overview
+          tags$h5(icon("fish"), " What is this app?"),
+          tags$p("This simulator provides an interactive interface to the ", 
+                 tags$a("anadrofish", href = "https://github.com/danStich/anadrofish", target = "_blank"), 
+                 " R package, which models anadromous fish population responses to dams, fisheries, and 
+                 restoration activities in Atlantic coastal rivers of Canada and the United States."),
+          tags$p("The core ", tags$code("sim_pop()"), " function links dam passage rates to habitat availability 
+                 and stochastic population models to simulate species-specific responses across marine and 
+                 freshwater habitats."),
+          
+          tags$hr(),
+          
+          # Species
+          tags$h5(icon("water"), " Supported Species"),
+          tags$ul(
+            tags$li(tags$strong("Alewife"), tags$em(" (Alosa pseudoharengus)"), 
+                    " — 222 populations in Atlantic Coastal rivers"),
+            tags$li(tags$strong("American Shad"), tags$em(" (Alosa sapidissima)"), 
+                    " — 167 populations; peer-reviewed in the 2020 ASMFC Benchmark Stock Assessment"),
+            tags$li(tags$strong("Blueback Herring"), tags$em(" (Alosa aestivalis)"), 
+                    " — 238 populations; peer-reviewed in the 2024 ASMFC River Herring Benchmark Stock Assessment")
+          ),
+          tags$p("Rivers range from Florida, USA (St. Johns River) to Quebec, Canada (St. Lawrence drainage). 
+                 Use ", tags$code("get_rivers()"), " in R to see the full list per species."),
+          
+          tags$hr(),
+          
+          # Parameters guide
+          tags$h5(icon("sliders"), " Parameter Guide"),
+          tags$table(
+            class = "table table-sm table-bordered",
+            tags$thead(tags$tr(tags$th("Parameter"), tags$th("Description"))),
+            tags$tbody(
+              tags$tr(tags$td(tags$strong("Number of Years")), 
+                      tags$td("How many years the simulation runs. More years allow the population to stabilize. Recommended: 50+ years.")),
+              tags$tr(tags$td(tags$strong("Initial Population Size")), 
+                      tags$td("Starting number of spawning adults (n_init). Typically 10,000–1,000,000 depending on the river.")),
+              tags$tr(tags$td(tags$strong("Sex Ratio (sr)")), 
+                      tags$td("Proportion of females in the population. 0.5 means an equal 50/50 male-to-female split.")),
+              tags$tr(tags$td(tags$strong("SR Parameter (b)")), 
+                      tags$td("Beverton-Holt stock-recruitment parameter controlling density dependence. Lower values = stronger density dependence.")),
+              tags$tr(tags$td(tags$strong("Upstream Passage (Adults)")), 
+                      tags$td("Percentage of adult fish that successfully pass upstream through dams (0–100%). 100% = no dams.")),
+              tags$tr(tags$td(tags$strong("Downstream Passage (Adults)")), 
+                      tags$td("Percentage of adult fish surviving downstream passage through dams after spawning.")),
+              tags$tr(tags$td(tags$strong("Downstream Passage (Juveniles)")), 
+                      tags$td("Percentage of juvenile fish surviving their downstream migration through dams to the ocean.")),
+              tags$tr(tags$td(tags$strong("Output Years")), 
+                      tags$td(tags$strong("All Years:"), " returns spawner count for each year (good for trend analysis). ",
+                              tags$strong("Final Year Only:"), " returns age-structured output for the last simulated year.")),
+              tags$tr(tags$td(tags$strong("Sex-Specific Model")), 
+                      tags$td("When enabled, the model tracks males and females separately for greater biological realism."))
+            )
+          ),
+          
+          tags$hr(),
+          
+          # Custom habitat
+          tags$h5(icon("file-csv"), " Using a Custom Habitat CSV"),
+          tags$p("You can supply your own river habitat data instead of using built-in rivers. 
+                 Click ", tags$strong("Download Template"), " in the Habitat tab to get a properly 
+                 formatted CSV for your selected species. Fill in the habitat area (", tags$code("Hab_sqkm"), 
+                 ") and dam ordering (", tags$code("dam_order"), ") for each segment, then upload it."),
+          tags$p(tags$strong("Key columns:"), " ", tags$code("river"), ", ", tags$code("region"), ", ",
+                 tags$code("govt"), ", ", tags$code("dam_order"), " (number of dams from each segment to the first), ",
+                 "and ", tags$code("Hab_sqkm"), " (habitat surface area in square kilometers)."),
+          
+
+        ),
+        tags$div(
+          class = "modal-footer",
+          tags$a("View on GitHub", href = "https://github.com/danStich/anadrofish", 
+                 target = "_blank", class = "btn btn-outline-secondary btn-sm"),
+          tags$button(type = "button", class = "btn btn-primary btn-sm", 
+                      `data-bs-dismiss` = "modal", "Close")
+        )
+      )
+    )
+  ),
+  
+  # Main Title row with Help button
+  div(
+    style = "padding: 15px 0px; display: flex; align-items: center; justify-content: space-between;",
+    h2(icon("fish"), "Anadromous Fish Population Simulator"),
+    tags$button(
+      type = "button",
+      class = "btn btn-outline-primary btn-sm",
+      `data-bs-toggle` = "modal",
+      `data-bs-target` = "#helpModal",
+      icon("circle-info"), " Help & About"
+    )
+  ),
   
   fluidRow(
     
@@ -95,7 +268,7 @@ ui <- fluidPage(
              nav_panel("Plot Output", icon = icon("chart-line"),
                        br(),
                        h4(textOutput("plot_title"), align = "center"),
-                       withSpinner(plotOutput("results_plot", height = "500px"))
+                       uiOutput("plot_or_empty")
              ),
              
              nav_panel("Summary Statistics", icon = icon("list"),
@@ -188,7 +361,20 @@ server <- function(input, output, session) {
       paste("Simulation for", species_name, "in Custom Habitat Configuration")
     }
   })
-  
+
+  # Renders either the plot or a friendly empty state before first run
+  output$plot_or_empty <- renderUI({
+    if (input$run_button == 0) {
+      div(class = "empty-state",
+        icon("chart-line"),
+        p("Configure your habitat, parameters, and passage rates on the left, then click",
+          strong(" Run Simulation"), " to see results here.")
+      )
+    } else {
+      withSpinner(plotOutput("results_plot", height = "500px"))
+    }
+  })
+
   output$results_plot <- renderPlot({
     the_plot_data <- simulation_from_model()
     req(the_plot_data)
@@ -215,16 +401,34 @@ server <- function(input, output, session) {
     final_pop <- tail(yearly_totals$spawners, 1)
     
     trend_text <- if(final_pop > init_pop) "Increasing" else "Decreasing"
-    trend_color <- if(final_pop > init_pop) "green" else "red"
+    trend_color <- if(final_pop > init_pop) "#198754" else "#dc3545"
     trend_icon <- if(final_pop > init_pop) icon("arrow-trend-up") else icon("arrow-trend-down")
-    
+
+    # Metric tiles for key stats
     tagList(
-      p(strong("Initial Population: "), format(round(init_pop), big.mark=",")),
-      p(strong("Final Population: "), format(round(final_pop), big.mark=",")),
-      p(strong("Mean Population: "), format(round(mean(yearly_totals$spawners)), big.mark=",")),
-      p(strong("Peak Population: "), format(round(max(yearly_totals$spawners)), big.mark=",")),
-      hr(),
-      h4("Population Trend:", span(trend_icon, trend_text, style = paste0("color:", trend_color, ";")))
+      fluidRow(
+        column(3, div(class = "metric-tile",
+          div(class = "metric-label", "Initial Population"),
+          div(class = "metric-value", format(round(init_pop), big.mark = ","))
+        )),
+        column(3, div(class = "metric-tile",
+          div(class = "metric-label", "Final Population"),
+          div(class = "metric-value", format(round(final_pop), big.mark = ","))
+        )),
+        column(3, div(class = "metric-tile",
+          div(class = "metric-label", "Mean Population"),
+          div(class = "metric-value", format(round(mean(yearly_totals$spawners)), big.mark = ","))
+        )),
+        column(3, div(class = "metric-tile",
+          div(class = "metric-label", "Peak Population"),
+          div(class = "metric-value", format(round(max(yearly_totals$spawners)), big.mark = ","))
+        ))
+      ),
+      div(class = "trend-banner",
+        trend_icon,
+        p(class = "trend-label", "Population Trend:"),
+        p(class = "trend-value", style = paste0("color:", trend_color, ";"), trend_text)
+      )
     )
   })
 }
